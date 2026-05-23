@@ -18,10 +18,21 @@ public class RedirectController {
 
     @GetMapping("/{code:[a-zA-Z0-9\\-_]+}")
     public ResponseEntity<Void> redirect(@PathVariable String code) {
-        String originalUrl = urlService.getOriginalUrl(code);
-
-        return ResponseEntity.status(HttpStatus.FOUND)
-                .location(URI.create(originalUrl))
-                .build();
+        try {
+            String originalUrl = urlService.getOriginalUrl(code);
+            return ResponseEntity.status(HttpStatus.FOUND)
+                    .location(URI.create(originalUrl))
+                    .build();
+        } catch (RuntimeException e) {
+            if ("URL has expired".equals(e.getMessage())) {
+                return ResponseEntity.status(HttpStatus.FOUND)
+                        .location(URI.create("/expired.html"))
+                        .build();
+            } else {
+                return ResponseEntity.status(HttpStatus.FOUND)
+                        .location(URI.create("/not-found.html"))
+                        .build();
+            }
+        }
     }
 }

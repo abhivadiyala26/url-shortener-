@@ -29,13 +29,14 @@ public class UrlController {
             @Valid @RequestBody UrlRequest request,
             @AuthenticationPrincipal User user
     ) {
-        String shortCode = service.shortenUrl(request.getOriginalUrl(), request.getCustomAlias(), user);
+        String shortCode = service.shortenUrl(request.getOriginalUrl(), request.getCustomAlias(), request.getExpiresAt(), user);
         
         UrlResponse response = new UrlResponse(
                 request.getOriginalUrl(),
                 shortCode,
                 0,
-                LocalDateTime.now()
+                LocalDateTime.now(),
+                request.getExpiresAt()
         );
         
         return ResponseEntity.ok(response);
@@ -50,10 +51,22 @@ public class UrlController {
                         url.getOriginalUrl(),
                         url.getShortCode(),
                         url.getClickCount(),
-                        url.getCreatedAt()
+                        url.getCreatedAt(),
+                        url.getExpiresAt()
                 ))
                 .collect(Collectors.toList());
                 
+        return ResponseEntity.ok(response);
+    }
+
+    @DeleteMapping("/delete/{shortCode}")
+    public ResponseEntity<Map<String, String>> deleteUrl(
+            @PathVariable String shortCode,
+            @AuthenticationPrincipal User user
+    ) {
+        service.deleteUrl(shortCode, user);
+        Map<String, String> response = new HashMap<>();
+        response.put("message", "URL deleted successfully");
         return ResponseEntity.ok(response);
     }
 

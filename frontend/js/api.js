@@ -1,4 +1,4 @@
-const API_BASE_URL = 'http://localhost:8080/api';
+const API_BASE_URL = '/api';
 
 const api = {
     setToken(token) {
@@ -74,6 +74,9 @@ const api = {
         }),
         getDashboardStats: () => api.request('/url/dashboard-stats', {
             method: 'GET'
+        }),
+        deleteUrl: (shortCode) => api.request(`/url/delete/${shortCode}`, {
+            method: 'DELETE'
         })
     }
 };

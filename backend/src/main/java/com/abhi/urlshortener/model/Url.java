@@ -18,6 +18,7 @@ public class Url {
 
     private LocalDateTime createdAt;
     private int clickCount;
+    private LocalDateTime expiresAt;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id")
@@ -25,12 +26,13 @@ public class Url {
 
     public Url() {}
 
-    public Url(Long id, String originalUrl, String shortCode, LocalDateTime createdAt, int clickCount, User user) {
+    public Url(Long id, String originalUrl, String shortCode, LocalDateTime createdAt, int clickCount, LocalDateTime expiresAt, User user) {
         this.id = id;
         this.originalUrl = originalUrl;
         this.shortCode = shortCode;
         this.createdAt = createdAt;
         this.clickCount = clickCount;
+        this.expiresAt = expiresAt;
         this.user = user;
     }
 
@@ -48,6 +50,9 @@ public class Url {
 
     public int getClickCount() { return clickCount; }
     public void setClickCount(int clickCount) { this.clickCount = clickCount; }
+
+    public LocalDateTime getExpiresAt() { return expiresAt; }
+    public void setExpiresAt(LocalDateTime expiresAt) { this.expiresAt = expiresAt; }
 
     public User getUser() { return user; }
     public void setUser(User user) { this.user = user; }

@@ -7,14 +7,16 @@ public class UrlResponse {
     private String shortUrl;
     private int clickCount;
     private LocalDateTime createdAt;
+    private LocalDateTime expiresAt;
 
     public UrlResponse() {}
 
-    public UrlResponse(String originalUrl, String shortUrl, int clickCount, LocalDateTime createdAt) {
+    public UrlResponse(String originalUrl, String shortUrl, int clickCount, LocalDateTime createdAt, LocalDateTime expiresAt) {
         this.originalUrl = originalUrl;
         this.shortUrl = shortUrl;
         this.clickCount = clickCount;
         this.createdAt = createdAt;
+        this.expiresAt = expiresAt;
     }
 
     public String getOriginalUrl() { return originalUrl; }
@@ -28,4 +30,7 @@ public class UrlResponse {
 
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
+
+    public LocalDateTime getExpiresAt() { return expiresAt; }
+    public void setExpiresAt(LocalDateTime expiresAt) { this.expiresAt = expiresAt; }
 }

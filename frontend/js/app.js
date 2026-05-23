@@ -1,4 +1,4 @@
-const BACKEND_BASE_URL = 'http://localhost:8080';
+const BACKEND_BASE_URL = window.location.origin;
 
 // Toast Notification Helper
 function showToast(message, type = 'success') {
@@ -18,7 +18,12 @@ function showError(message) {
     const errorEl = document.getElementById('auth-error');
     if(!errorEl) return;
     
-    errorEl.textContent = message;
+    const errorText = document.getElementById('error-text');
+    if (errorText) {
+        errorText.textContent = message;
+    } else {
+        errorEl.textContent = message;
+    }
     errorEl.classList.remove('d-none');
 }
 
@@ -41,22 +46,75 @@ function toggleLoader(btnId, isLoading) {
     }
 }
 
-// Auth Tabs Logic
+// DOM Content Loaded Handler (Routing, Search, and Password Strength listeners)
 document.addEventListener('DOMContentLoaded', () => {
-    const tabBtns = document.querySelectorAll('.tab-btn');
-    if (tabBtns.length > 0) {
-        tabBtns.forEach(btn => {
-            btn.addEventListener('click', () => {
-                tabBtns.forEach(b => b.classList.remove('active'));
-                btn.classList.add('active');
+    const path = window.location.pathname;
+    
+    // Client-side authentication routing guard
+    if (path.includes('dashboard.html')) {
+        if (!api.isAuthenticated()) {
+            window.location.href = 'login.html';
+            return;
+        } else {
+            // Display username in dashboard navbar
+            const usernameDisplay = document.getElementById('username-display');
+            if (usernameDisplay) {
+                usernameDisplay.textContent = localStorage.getItem('username') || 'User';
+            }
+            loadDashboardData();
+
+            // Attach search input listener
+            const searchInput = document.getElementById('search-links');
+            if (searchInput) {
+                searchInput.addEventListener('input', filterLinks);
+            }
+        }
+    } else if (path.includes('login.html') || path.includes('signup.html')) {
+        if (api.isAuthenticated()) {
+            window.location.href = 'dashboard.html';
+            return;
+        }
+
+        // Attach password strength meter listener (if on signup page)
+        const passwordInput = document.getElementById('signup-password');
+        if (passwordInput) {
+            const strengthContainer = document.getElementById('password-strength-container');
+            const strengthFill = document.getElementById('strength-meter-fill');
+            const strengthLabel = document.getElementById('strength-meter-label');
+            
+            passwordInput.addEventListener('input', () => {
+                const val = passwordInput.value;
+                if (!val) {
+                    strengthContainer.classList.add('d-none');
+                    return;
+                }
                 
-                document.querySelectorAll('.auth-form').forEach(form => form.classList.remove('active'));
-                document.getElementById(`${btn.dataset.target}-form`).classList.add('active');
+                strengthContainer.classList.remove('d-none');
                 
-                const errorEl = document.getElementById('auth-error');
-                if(errorEl) errorEl.classList.add('d-none');
+                let score = 0;
+                if (val.length >= 8) score++;
+                if (/[a-z]/.test(val) && /[A-Z]/.test(val)) score++;
+                if (/\d/.test(val)) score++;
+                if (/[^A-Za-z0-9]/.test(val)) score++;
+                
+                strengthFill.className = 'strength-meter-fill';
+                strengthLabel.className = 'strength-meter-label';
+                
+                if (score <= 1) {
+                    strengthFill.classList.add('weak');
+                    strengthLabel.classList.add('weak');
+                    strengthLabel.textContent = 'Weak (Needs 8+ chars with upper, lower & digit)';
+                } else if (score === 2 || score === 3) {
+                    strengthFill.classList.add('medium');
+                    strengthLabel.classList.add('medium');
+                    strengthLabel.textContent = 'Medium (Good password)';
+                } else {
+                    strengthFill.classList.add('strong');
+                    strengthLabel.classList.add('strong');
+                    strengthLabel.textContent = 'Strong (Very secure)';
+                }
             });
-        });
+        }
     }
 });
 
@@ -141,15 +199,36 @@ async function loadLinksTable() {
                 const shortUrlFull = `${BACKEND_BASE_URL}/${url.shortUrl}`;
                 const date = new Date(url.createdAt).toLocaleDateString();
                 
+                // Expiry processing
+                let expiryHtml = '<span class="td-expiry none">No Expiry</span>';
+                if (url.expiresAt) {
+                    const isExpired = new Date(url.expiresAt) < new Date();
+                    const expiryDateStr = new Date(url.expiresAt).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' });
+                    if (isExpired) {
+                        expiryHtml = `<span class="td-expiry expired"><i class="bx bx-calendar-x"></i> Expired</span>`;
+                    } else {
+                        expiryHtml = `<span class="td-expiry active" title="Expires at ${expiryDateStr}"><i class="bx bx-calendar-check"></i> ${new Date(url.expiresAt).toLocaleDateString()}</span>`;
+                    }
+                }
+                
                 tr.innerHTML = `
                     <td class="td-original-url" title="${url.originalUrl}">${url.originalUrl}</td>
                     <td class="td-short-url"><a href="${shortUrlFull}" target="_blank">${url.shortUrl}</a></td>
+                    <td>${expiryHtml}</td>
                     <td><span class="badge">${url.clickCount}</span></td>
                     <td>${date}</td>
                     <td>
-                        <button class="btn btn-icon" onclick="copyText('${shortUrlFull}')" title="Copy">
-                            <i class='bx bx-copy'></i>
-                        </button>
+                        <div style="display: flex; gap: 8px;">
+                            <button class="btn btn-icon" onclick="copyText('${shortUrlFull}')" title="Copy URL">
+                                <i class='bx bx-copy'></i>
+                            </button>
+                            <button class="btn btn-icon" onclick="openQrModal('${shortUrlFull}')" title="Generate QR Code">
+                                <i class='bx bx-qr-scan'></i>
+                            </button>
+                            <button class="btn btn-icon" onclick="handleDeleteUrl('${url.shortUrl}')" title="Delete URL" style="color: var(--danger); border-color: rgba(239,68,68,0.15);">
+                                <i class='bx bx-trash'></i>
+                            </button>
+                        </div>
                     </td>
                 `;
                 tbody.appendChild(tr);
@@ -166,10 +245,14 @@ async function handleShorten(e) {
     e.preventDefault();
     const originalUrl = document.getElementById('long-url').value;
     const customAlias = document.getElementById('custom-alias').value;
+    const expiresAtInput = document.getElementById('expires-at').value;
+    
+    // Parse expiry date if selected
+    const expiresAt = expiresAtInput ? expiresAtInput : null;
     
     try {
         toggleLoader('shorten-btn', true);
-        const res = await api.url.shorten({ originalUrl, customAlias });
+        const res = await api.url.shorten({ originalUrl, customAlias, expiresAt });
         
         const shortUrlFull = `${BACKEND_BASE_URL}/${res.shortUrl}`;
         const resultDiv = document.getElementById('shorten-result');
@@ -181,6 +264,7 @@ async function handleShorten(e) {
         
         document.getElementById('long-url').value = '';
         document.getElementById('custom-alias').value = '';
+        document.getElementById('expires-at').value = '';
         
         showToast('Link shortened successfully!');
         
@@ -190,6 +274,59 @@ async function handleShorten(e) {
         showToast(err.message || 'Failed to shorten URL', 'error');
     } finally {
         toggleLoader('shorten-btn', false);
+    }
+}
+
+// Delete Handler
+async function handleDeleteUrl(shortCode) {
+    if (!confirm('Are you sure you want to delete this shortened URL? This action cannot be undone.')) {
+        return;
+    }
+    
+    try {
+        await api.url.deleteUrl(shortCode);
+        showToast('URL deleted successfully');
+        loadDashboardData();
+    } catch (err) {
+        showToast(err.message || 'Failed to delete URL', 'error');
+    }
+}
+
+// QR Code Modal Controls
+function openQrModal(url) {
+    const modal = document.getElementById('qr-modal');
+    const img = document.getElementById('qr-code-img');
+    if (modal && img) {
+        img.src = `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(url)}`;
+        modal.classList.remove('d-none');
+    }
+}
+
+function closeQrModal() {
+    const modal = document.getElementById('qr-modal');
+    if (modal) {
+        modal.classList.add('d-none');
+    }
+}
+
+// Search Filter
+function filterLinks() {
+    const query = document.getElementById('search-links').value.toLowerCase();
+    const tbody = document.getElementById('links-table-body');
+    if (!tbody) return;
+    
+    const rows = tbody.getElementsByTagName('tr');
+    
+    for (let i = 0; i < rows.length; i++) {
+        const row = rows[i];
+        const originalUrl = row.cells[0].textContent.toLowerCase();
+        const shortUrl = row.cells[1].textContent.toLowerCase();
+        
+        if (originalUrl.includes(query) || shortUrl.includes(query)) {
+            row.style.display = '';
+        } else {
+            row.style.display = 'none';
+        }
     }
 }
 
@@ -204,4 +341,30 @@ function copyText(text) {
     }).catch(() => {
         showToast('Failed to copy', 'error');
     });
+}
+
+function toggleAdvancedOptions() {
+    const adv = document.getElementById('advanced-options');
+    const chev = document.getElementById('advanced-chevron');
+    if (adv && chev) {
+        adv.classList.toggle('d-none');
+        if (adv.classList.contains('d-none')) {
+            chev.className = 'bx bx-chevron-down';
+        } else {
+            chev.className = 'bx bx-chevron-up';
+        }
+    }
+}
+
+function togglePasswordVisibility(inputId, toggleEl) {
+    const input = document.getElementById(inputId);
+    if (!input) return;
+    
+    if (input.type === 'password') {
+        input.type = 'text';
+        toggleEl.className = 'bx bx-show password-toggle';
+    } else {
+        input.type = 'password';
+        toggleEl.className = 'bx bx-hide password-toggle';
+    }
 }

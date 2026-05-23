@@ -16,7 +16,7 @@ public class UrlService {
     @Autowired
     private UrlRepository repository;
 
-    public String shortenUrl(String originalUrl, String customAlias, User user) {
+    public String shortenUrl(String originalUrl, String customAlias, LocalDateTime expiresAt, User user) {
         String shortCode;
 
         if (customAlias != null && !customAlias.isEmpty()) {
@@ -35,6 +35,7 @@ public class UrlService {
         url.setShortCode(shortCode);
         url.setCreatedAt(LocalDateTime.now());
         url.setClickCount(0);
+        url.setExpiresAt(expiresAt);
         url.setUser(user);
 
         repository.save(url);
@@ -46,10 +47,25 @@ public class UrlService {
         Url url = repository.findByShortCode(code)
                 .orElseThrow(() -> new RuntimeException("URL not found"));
 
+        if (url.getExpiresAt() != null && url.getExpiresAt().isBefore(LocalDateTime.now())) {
+            throw new RuntimeException("URL has expired");
+        }
+
         url.setClickCount(url.getClickCount() + 1);
         repository.save(url);
 
         return url.getOriginalUrl();
+    }
+
+    public void deleteUrl(String shortCode, User user) {
+        Url url = repository.findByShortCode(shortCode)
+                .orElseThrow(() -> new RuntimeException("URL not found"));
+
+        if (url.getUser() == null || !url.getUser().getId().equals(user.getId())) {
+            throw new RuntimeException("Unauthorized to delete this URL");
+        }
+
+        repository.delete(url);
     }
 
     public List<Url> getMyUrls(User user) {
