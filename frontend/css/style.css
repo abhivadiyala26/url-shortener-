@@ -1294,3 +1294,8 @@ body::after {
 .input-container input[type="password"] {
   padding-right: 2.75rem !important;
 }
+
+.logo-link {
+  text-decoration: none;
+  display: inline-block;
+}
