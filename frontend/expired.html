@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Link Expired | Shortly</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link href="https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css" rel="stylesheet">
+  <style>
+    .error-container {
+      flex: 1;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 2rem 1.5rem;
+    }
+    .error-card {
+      width: 100%;
+      max-width: 480px;
+      background: var(--bg-card);
+      backdrop-filter: blur(20px);
+      border: 1px solid var(--border-glass);
+      border-radius: 24px;
+      padding: 3.5rem 2.5rem;
+      text-align: center;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+    }
+    .error-icon {
+      font-size: 4.5rem;
+      color: var(--warning);
+      margin-bottom: 1.5rem;
+      display: inline-block;
+      animation: pulse 2s infinite ease-in-out;
+    }
+    .error-card h1 {
+      font-family: 'Outfit', sans-serif;
+      font-size: 2.2rem;
+      font-weight: 700;
+      margin-bottom: 1rem;
+    }
+    .error-card p {
+      color: var(--text-secondary);
+      line-height: 1.6;
+      margin-bottom: 2.25rem;
+    }
+    @keyframes pulse {
+      0% { transform: scale(1); opacity: 0.8; }
+      50% { transform: scale(1.1); opacity: 1; text-shadow: 0 0 15px rgba(245, 158, 11, 0.4); }
+      100% { transform: scale(1); opacity: 0.8; }
+    }
+  </style>
+</head>
+<body>
+
+<nav class="navbar">
+  <h2><i class="bx bx-link-alt"></i>Shortly</h2>
+</nav>
+
+<div class="error-container">
+  <div class="error-card">
+    <div class="error-icon">
+      <i class="bx bx-time-five"></i>
+    </div>
+    <h1>Link Has Expired</h1>
+    <p>
+      The creator of this shortened link has set an expiration limit, and this URL is no longer active. If you need access, please contact the link provider for a new link.
+    </p>
+    <a href="index.html" class="btn btn-primary" style="width: 100%;">
+      <i class="bx bx-home-alt"></i> Back to Homepage
+    </a>
+  </div>
+</div>
+
+</body>
+</html>
